@@ -19,6 +19,14 @@ module Homebrew
 
         A <formula> can be specified by name, a JSON file, or a URL.
       EOS
+      switch "-f", "--force",
+             description: "Install formulae without checking for previously installed keg-only or " \
+                          "non-migrated versions."
+      switch "--keep-tmp",
+             description: "Retain the temporary files created during installation."
+      switch "--display-times",
+             env:         :display_install_times,
+             description: "Print install times for each formula at the end of the run."
 
       named_args [:formula, :file, :url], min: 1
     end
@@ -27,6 +35,8 @@ module Homebrew
   sig { void }
   def json
     args = json_args.parse
+
+    formulae = []
 
     args.named.each do |arg|
       json = if File.exist? arg
@@ -48,10 +58,38 @@ module Homebrew
 
       name = hash["name"]
       bottles = download_bottles hash
-
-      formula = Formulary.factory bottles[name]
-      install_formula formula, args: install_args(args: args)
+      formulae << Formulary.factory(bottles[name])
     end
+
+    return if formulae.empty?
+
+    Install.perform_preinstall_checks
+
+    formulae.each do |formula|
+      Migrator.migrate_if_needed(formula, force: args.force?)
+      install_formula(
+        formula,
+        keep_tmp: args.keep_tmp?,
+        force:    args.force?,
+        debug:    args.debug?,
+        quiet:    args.quiet?,
+        verbose:  args.verbose?,
+      )
+      Cleanup.install_formula_clean!(formula)
+    end
+
+    Upgrade.check_installed_dependents(
+      formulae,
+      flags:                args.flags_only,
+      installed_on_request: true,
+      keep_tmp:             args.keep_tmp?,
+      force:                args.force?,
+      debug:                args.debug?,
+      quiet:                args.quiet?,
+      verbose:              args.verbose?,
+    )
+
+    Homebrew.messages.display_messages(display_times: args.display_times?)
   end
 
   sig { params(url: String).returns(T.nilable(String)) }
@@ -94,39 +132,26 @@ module Homebrew
     resource.fetch
   end
 
-  def install_args(args:)
-    result = OpenStruct.new
-    result[:debug] = args.debug?
-    result[:quiet] = args.quiet?
-    result[:verbose] = args.verbose?
-    result
-  end
-
-  # Copied directly from the install command
-  def install_formula(f, args:)
+  # Copied from the install command (for now)
+  def install_formula(
+    f,
+    keep_tmp: false,
+    force: false,
+    debug: false,
+    quiet: false,
+    verbose: false
+  )
     f.print_tap_action
     build_options = f.build
 
     fi = FormulaInstaller.new(
       f,
-      **{
-        options:                    build_options.used_options,
-        build_bottle:               args.build_bottle?,
-        force_bottle:               args.force_bottle?,
-        bottle_arch:                args.bottle_arch,
-        ignore_deps:                args.ignore_dependencies?,
-        only_deps:                  args.only_dependencies?,
-        include_test_formulae:      args.include_test_formulae,
-        build_from_source_formulae: args.build_from_source_formulae,
-        cc:                         args.cc,
-        git:                        args.git?,
-        interactive:                args.interactive?,
-        keep_tmp:                   args.keep_tmp?,
-        force:                      args.force?,
-        debug:                      args.debug?,
-        quiet:                      args.quiet?,
-        verbose:                    args.verbose?,
-      }.compact,
+      options:  build_options.used_options,
+      keep_tmp: keep_tmp,
+      force:    force,
+      debug:    debug,
+      quiet:    quiet,
+      verbose:  verbose,
     )
     fi.prelude
     fi.fetch
