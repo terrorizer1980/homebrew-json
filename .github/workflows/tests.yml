@@ -12,6 +12,8 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
+      - run: brew install-bundler-gems
+
       - run: brew style $GITHUB_REPOSITORY
 
       - run: brew json hello
