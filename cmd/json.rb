@@ -40,7 +40,12 @@ module Homebrew
         output.stdout
       end
 
-      hash = JSON.parse(json)
+      begin
+        hash = JSON.parse(json)
+      rescue JSON::ParserError
+        odie "Invalid JSON file: #{Tty.underline}#{arg}#{Tty.reset}"
+      end
+
       name = hash["name"]
       bottles = download_bottles hash
 
