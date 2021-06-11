@@ -1,11 +1,19 @@
-# Homebrew Json
+# Homebrew JSON Installer
 
-## How do I install these formulae?
+The `brew json` command allows for formulae to be installed using the bottle API available on https://formulae.brew.sh/.
 
-`brew install homebrew/json/<formula>`
+To use, first tap this repository:
 
-Or `brew tap homebrew/json` and then `brew install <formula>`.
+```
+brew tap homebrew/json
+```
 
-## Documentation
+Then, use `brew json` with either a name of a formula in [Homebrew/homebrew-core](https://github.com/Homebrew/homebrew-core) or a path/URL to a JSON file:
 
-`brew help`, `man brew` or check [Homebrew's documentation](https://docs.brew.sh).
+```sh
+# Using the formula name
+brew json hello
+
+# Using a URL
+brew json https://formulae.brew.sh/api/bottle/hello.json
+```
