@@ -17,3 +17,7 @@ brew json hello
 # Using a URL
 brew json https://formulae.brew.sh/api/bottle/hello.json
 ```
+
+## License
+
+Code is under the [BSD 2-clause "Simplified" License](LICENSE.txt).
