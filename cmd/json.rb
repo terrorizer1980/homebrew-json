@@ -2,6 +2,26 @@
 
 require "formula_installer"
 
+# Monkey patch Formulary::factory to read from cached bottles
+module Formulary
+  class << self
+    alias old_factory factory
+
+    def factory(ref, *args, **kwargs)
+      old_factory ref, *args, **kwargs
+    rescue FormulaUnavailableError
+      ref = HOMEBREW_CACHE.glob("#{ref}--*").max_by do |path|
+        Version.new(path.to_s.split("--").last)
+      end
+
+      raise if ref.blank? || !ref.exist?
+
+      ref = ref.realpath
+      retry
+    end
+  end
+end
+
 module Homebrew
   module_function
 
@@ -119,6 +139,7 @@ module Homebrew
     resource = Resource.new hash["name"]
     resource.url bottle["url"]
     resource.sha256 sha256
+    resource.version hash["pkg_version"]
     resource.downloader.resolved_basename = bottle_filename
 
     resource.fetch
