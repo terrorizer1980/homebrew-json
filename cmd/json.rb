@@ -51,9 +51,7 @@ module Homebrew
   def json
     args = json_args.parse
 
-    formulae = []
-
-    args.named.each do |arg|
+    formulae = args.named.map do |arg|
       json = if File.exist? arg
         File.read(arg)
       else
@@ -73,8 +71,10 @@ module Homebrew
 
       name = hash["name"]
       bottles = download_bottles hash
-      formulae << Formulary.factory(bottles[name])
-    end
+      formula = Formulary.factory(bottles[name])
+
+      formula if Install.install_formula? formula, force: args.force?, quiet: args.quiet?
+    end.compact
 
     return if formulae.empty?
 
@@ -82,7 +82,7 @@ module Homebrew
 
     formulae.each do |formula|
       Migrator.migrate_if_needed(formula, force: args.force?)
-      install_formula(
+      Install.install_formula(
         formula,
         keep_tmp: args.keep_tmp?,
         force:    args.force?,
@@ -143,38 +143,5 @@ module Homebrew
     resource.downloader.resolved_basename = bottle_filename
 
     resource.fetch
-  end
-
-  # Copied from the install command (for now)
-  def install_formula(
-    f,
-    keep_tmp: false,
-    force: false,
-    debug: false,
-    quiet: false,
-    verbose: false
-  )
-    f.print_tap_action
-    build_options = f.build
-
-    fi = FormulaInstaller.new(
-      f,
-      options:  build_options.used_options,
-      keep_tmp: keep_tmp,
-      force:    force,
-      debug:    debug,
-      quiet:    quiet,
-      verbose:  verbose,
-    )
-    fi.prelude
-    fi.fetch
-    fi.install
-    fi.finish
-  rescue FormulaInstallationAlreadyAttemptedError
-    # We already attempted to install f as part of the dependency tree of
-    # another formula. In that case, don't generate an error, just move on.
-    nil
-  rescue CannotInstallFormulaError => e
-    ofail e.message
   end
 end
