@@ -1,17 +1,13 @@
-# typed: true
 # frozen_string_literal: true
 
 require "formula_installer"
 
 module Homebrew
-  extend T::Sig
-
   module_function
 
   FORMULAE_BREW_SH_BOTTLE_API_DOMAIN = Pathname.new("https://formulae.brew.sh/api/bottle").freeze
   GITHUB_PACKAGES_SHA256_REGEX = %r{#{GitHubPackages::URL_REGEX}.*/blobs/sha256:(?<sha256>\h{64})$}.freeze
 
-  sig { returns(CLI::Parser) }
   def json_args
     Homebrew::CLI::Parser.new do
       description <<~EOS
@@ -32,7 +28,6 @@ module Homebrew
     end
   end
 
-  sig { void }
   def json
     args = json_args.parse
 
@@ -92,7 +87,6 @@ module Homebrew
     Homebrew.messages.display_messages(display_times: args.display_times?)
   end
 
-  sig { params(url: String).returns(T.nilable(String)) }
   def checksum_from_url(url)
     match = url.match GITHUB_PACKAGES_SHA256_REGEX
     return if match.blank?
@@ -100,7 +94,6 @@ module Homebrew
     match[:sha256]
   end
 
-  sig { params(hash: Hash).returns(T::Hash[String, Pathname]) }
   def download_bottles(hash)
     bottle_tag = Utils::Bottles.tag.to_s
     bottles = {}
@@ -116,7 +109,6 @@ module Homebrew
     bottles
   end
 
-  sig { params(hash: Hash, tag: String).returns(Pathname) }
   def download_bottle(hash, tag)
     bottle = hash["bottles"][tag]
     return if bottle.blank?
