@@ -50,8 +50,8 @@ module Homebrew
       end
 
       name = hash["name"]
-      bottles = download_bottles hash
-      formula = Formulary.factory(bottles[name])
+      download_bottles hash
+      formula = Formulary.factory(name)
 
       formula if Install.install_formula? formula, force: args.force?, quiet: args.quiet?
     end.compact
@@ -96,17 +96,14 @@ module Homebrew
 
   def download_bottles(hash)
     bottle_tag = Utils::Bottles.tag.to_s
-    bottles = {}
 
     odie "No bottle availabe for current OS" unless hash["bottles"].key? bottle_tag
 
-    bottles[hash["name"]] = download_bottle(hash, bottle_tag)
+    download_bottle(hash, bottle_tag)
 
     hash["dependencies"].each do |dep_hash|
-      bottles[dep_hash["name"]] = download_bottle(dep_hash, bottle_tag)
+      download_bottle(dep_hash, bottle_tag)
     end
-
-    bottles
   end
 
   def download_bottle(hash, tag)
@@ -122,11 +119,11 @@ module Homebrew
     resource.version hash["pkg_version"]
     resource.downloader.resolved_basename = bottle_filename
 
+    resource.fetch
+
     # Map the name of this formula to the local bottle path to allow the
     # formula to be loaded by passing just the name to `Formulary::factory`.
     ENV["HOMEBREW_BOTTLE_JSON"] = "1"
     Formulary.map_formula_name_to_local_bottle_path hash["name"], resource.downloader.cached_location
-
-    resource.fetch
   end
 end
