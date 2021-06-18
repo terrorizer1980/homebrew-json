@@ -9,15 +9,34 @@ env:
   HOMEBREW_JSON_CORE: 1
 
 jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Cache Bundler RubyGems
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ runner.os }}-rubygems-
+
+      - name: Install Bundler RubyGems
+        run: brew install-bundler-gems
+
+      - run: brew test-bot --only-tap-syntax
+
   tests:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        version: ["macos-latest", "ubuntu-latest"]
+      fail-fast: false
+    runs-on: ${{ matrix.version }}
     steps:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
-
-      - run: brew install-bundler-gems
-
-      - run: brew style $GITHUB_REPOSITORY
 
       - run: brew untap homebrew/core
 
