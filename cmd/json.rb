@@ -31,6 +31,8 @@ module Homebrew
   def json
     args = json_args.parse
 
+    ENV["HOMEBREW_JSON_CORE"] = "1"
+
     formulae = args.named.map do |arg|
       json = if File.exist? arg
         File.read(arg)
@@ -123,7 +125,6 @@ module Homebrew
 
     # Map the name of this formula to the local bottle path to allow the
     # formula to be loaded by passing just the name to `Formulary::factory`.
-    ENV["HOMEBREW_BOTTLE_JSON"] = "1"
     Formulary.map_formula_name_to_local_bottle_path hash["name"], resource.downloader.cached_location
   end
 end
