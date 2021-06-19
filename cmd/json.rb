@@ -5,7 +5,12 @@ require "formula_installer"
 module Homebrew
   module_function
 
-  FORMULAE_BREW_SH_BOTTLE_API_DOMAIN = Pathname.new("https://formulae.brew.sh/api/bottle").freeze
+  FORMULAE_BREW_SH_BOTTLE_API_DOMAIN = if OS.mac?
+    "https://formulae.brew.sh/api/bottle"
+  else
+    "https://formulae.brew.sh/api/bottle-linux"
+  end.freeze
+
   GITHUB_PACKAGES_SHA256_REGEX = %r{#{GitHubPackages::URL_REGEX}.*/blobs/sha256:(?<sha256>\h{64})$}.freeze
 
   def json_args
@@ -37,9 +42,9 @@ module Homebrew
       json = if File.exist? arg
         File.read(arg)
       else
-        arg = FORMULAE_BREW_SH_BOTTLE_API_DOMAIN/"#{arg}.json" unless arg.start_with? %r{https?://}
+        arg = "#{FORMULAE_BREW_SH_BOTTLE_API_DOMAIN}/#{arg}.json" unless arg.start_with? %r{https?://}
 
-        output = curl_output("--fail", arg.to_s)
+        output = curl_output("--fail", arg)
         odie "No JSON file found at #{Tty.underline}#{arg}#{Tty.reset}" unless output.success?
 
         output.stdout
